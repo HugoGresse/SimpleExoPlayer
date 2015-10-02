@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <item name="sep_NativeVideoLayout" type="id"/>
+    <item name="sep_VideoContainerFrameLayout" type="id"/>
+    <item name="sep_VideoSurfaceLayout" type="id"/>
+    <item name="sep_FullScreenFrameLayout" type="id"/>
+
+</resources>
