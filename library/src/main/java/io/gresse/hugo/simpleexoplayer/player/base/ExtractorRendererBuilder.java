@@ -16,12 +16,15 @@
 package io.gresse.hugo.simpleexoplayer.player.base;
 
 import android.content.Context;
+import android.media.AudioManager;
 import android.media.MediaCodec;
 import android.net.Uri;
 
 import com.google.android.exoplayer.MediaCodecAudioTrackRenderer;
+import com.google.android.exoplayer.MediaCodecSelector;
 import com.google.android.exoplayer.MediaCodecVideoTrackRenderer;
 import com.google.android.exoplayer.TrackRenderer;
+import com.google.android.exoplayer.audio.AudioCapabilities;
 import com.google.android.exoplayer.extractor.Extractor;
 import com.google.android.exoplayer.extractor.ExtractorSampleSource;
 import com.google.android.exoplayer.text.TextTrackRenderer;
@@ -59,11 +62,12 @@ public class ExtractorRendererBuilder implements DemoPlayer.RendererBuilder {
         DataSource dataSource = new DefaultUriDataSource(context, bandwidthMeter, userAgent);
         ExtractorSampleSource sampleSource = new ExtractorSampleSource(uri, dataSource, allocator,
                 BUFFER_SEGMENT_COUNT * BUFFER_SEGMENT_SIZE);
-        MediaCodecVideoTrackRenderer videoRenderer = new MediaCodecVideoTrackRenderer(sampleSource,
-                null, true, MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT, 5000, null, player.getMainHandler(),
-                player, 50);
+        MediaCodecVideoTrackRenderer videoRenderer = new MediaCodecVideoTrackRenderer(context,
+                sampleSource, MediaCodecSelector.DEFAULT, MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT, 5000,
+                player.getMainHandler(), player, 50);
         MediaCodecAudioTrackRenderer audioRenderer = new MediaCodecAudioTrackRenderer(sampleSource,
-                null, true, player.getMainHandler(), player);
+                MediaCodecSelector.DEFAULT, null, true, player.getMainHandler(), player,
+                AudioCapabilities.getCapabilities(context), AudioManager.STREAM_MUSIC);
         TrackRenderer textRenderer = new TextTrackRenderer(sampleSource, player,
                 player.getMainHandler().getLooper());
 

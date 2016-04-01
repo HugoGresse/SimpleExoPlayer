@@ -26,7 +26,6 @@ import com.google.android.exoplayer.ExoPlaybackException;
 import com.google.android.exoplayer.ExoPlayer;
 import com.google.android.exoplayer.MediaCodecAudioTrackRenderer;
 import com.google.android.exoplayer.MediaCodecTrackRenderer;
-import com.google.android.exoplayer.MediaCodecTrackRenderer.DecoderInitializationException;
 import com.google.android.exoplayer.MediaCodecVideoTrackRenderer;
 import com.google.android.exoplayer.MediaFormat;
 import com.google.android.exoplayer.TimeRange;
@@ -37,7 +36,8 @@ import com.google.android.exoplayer.chunk.Format;
 import com.google.android.exoplayer.dash.DashChunkSource;
 import com.google.android.exoplayer.drm.StreamingDrmSessionManager;
 import com.google.android.exoplayer.hls.HlsSampleSource;
-import com.google.android.exoplayer.metadata.MetadataTrackRenderer.MetadataRenderer;
+import com.google.android.exoplayer.metadata.MetadataTrackRenderer;
+import com.google.android.exoplayer.metadata.id3.Id3Frame;
 import com.google.android.exoplayer.text.Cue;
 import com.google.android.exoplayer.text.TextRenderer;
 import com.google.android.exoplayer.upstream.BandwidthMeter;
@@ -48,7 +48,6 @@ import com.google.android.exoplayer.util.PlayerControl;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -60,7 +59,7 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
         HlsSampleSource.EventListener, DefaultBandwidthMeter.EventListener,
         MediaCodecVideoTrackRenderer.EventListener, MediaCodecAudioTrackRenderer.EventListener,
         StreamingDrmSessionManager.EventListener, DashChunkSource.EventListener, TextRenderer,
-        MetadataRenderer<Map<String, Object>>, DebugTextViewHelper.Provider {
+        MetadataTrackRenderer.MetadataRenderer<List<Id3Frame>>, DebugTextViewHelper.Provider {
 
     /**
      * Builds renderers for the player.
@@ -70,14 +69,13 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
          * Builds renderers for playback.
          *
          * @param player The player for which renderers are being built. {@link DemoPlayer#onRenderers}
-         *               should be invoked once the renderers have been built. If building fails,
-         *               {@link DemoPlayer#onRenderersError} should be invoked.
+         *     should be invoked once the renderers have been built. If building fails,
+         *     {@link DemoPlayer#onRenderersError} should be invoked.
          */
         void buildRenderers(DemoPlayer player);
-
         /**
          * Cancels the current build operation, if there is one. Else does nothing.
-         * <p/>
+         * <p>
          * A canceled build operation must not invoke {@link DemoPlayer#onRenderers} or
          * {@link DemoPlayer#onRenderersError} on the player, which may have been released.
          */
@@ -89,16 +87,14 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
      */
     public interface Listener {
         void onStateChanged(boolean playWhenReady, int playbackState);
-
         void onError(Exception e);
-
         void onVideoSizeChanged(int width, int height, int unappliedRotationDegrees,
                                 float pixelWidthHeightRatio);
     }
 
     /**
      * A listener for internal errors.
-     * <p/>
+     * <p>
      * These errors are not visible to the user, and hence this listener is provided for
      * informational purposes only. Note however that an internal error may cause a fatal
      * error if the player fails to recover. If this happens, {@link Listener#onError(Exception)}
@@ -106,17 +102,12 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
      */
     public interface InternalErrorListener {
         void onRendererInitializationError(Exception e);
-
         void onAudioTrackInitializationError(AudioTrack.InitializationException e);
-
         void onAudioTrackWriteError(AudioTrack.WriteException e);
-
-        void onDecoderInitializationError(DecoderInitializationException e);
-
+        void onAudioTrackUnderrun(int bufferSize, long bufferSizeMs, long elapsedSinceLastFeedMs);
+        void onDecoderInitializationError(MediaCodecTrackRenderer.DecoderInitializationException e);
         void onCryptoError(CryptoException e);
-
         void onLoadError(int sourceId, IOException e);
-
         void onDrmSessionManagerError(Exception e);
     }
 
@@ -125,23 +116,16 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
      */
     public interface InfoListener {
         void onVideoFormatEnabled(Format format, int trigger, long mediaTimeMs);
-
         void onAudioFormatEnabled(Format format, int trigger, long mediaTimeMs);
-
         void onDroppedFrames(int count, long elapsed);
-
         void onBandwidthSample(int elapsedMs, long bytes, long bitrateEstimate);
-
         void onLoadStarted(int sourceId, long length, int type, int trigger, Format format,
                            long mediaStartTimeMs, long mediaEndTimeMs);
-
         void onLoadCompleted(int sourceId, long bytesLoaded, int type, int trigger, Format format,
                              long mediaStartTimeMs, long mediaEndTimeMs, long elapsedRealtimeMs, long loadDurationMs);
-
         void onDecoderInitialized(String decoderName, long elapsedRealtimeMs,
                                   long initializationDurationMs);
-
-        void onAvailableRangeChanged(TimeRange availableRange);
+        void onAvailableRangeChanged(int sourceId, TimeRange availableRange);
     }
 
     /**
@@ -155,7 +139,7 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
      * A listener for receiving ID3 metadata parsed from the media stream.
      */
     public interface Id3MetadataListener {
-        void onId3Metadata(Map<String, Object> metadata);
+        void onId3Metadata(List<Id3Frame> id3Frames);
     }
 
     // Constants pulled into this class for convenience.
@@ -177,25 +161,25 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
     private static final int RENDERER_BUILDING_STATE_BUILDING = 2;
     private static final int RENDERER_BUILDING_STATE_BUILT = 3;
 
-    private final RendererBuilder rendererBuilder;
-    private final ExoPlayer player;
-    private final PlayerControl playerControl;
-    private final Handler mainHandler;
+    private final RendererBuilder                rendererBuilder;
+    private final ExoPlayer                      player;
+    private final PlayerControl                  playerControl;
+    private final Handler                        mainHandler;
     private final CopyOnWriteArrayList<Listener> listeners;
 
     private int rendererBuildingState;
     private int lastReportedPlaybackState;
     private boolean lastReportedPlayWhenReady;
 
-    private Surface surface;
+    private Surface       surface;
     private TrackRenderer videoRenderer;
     private TrackRenderer audioRenderer;
     private CodecCounters codecCounters;
-    private Format videoFormat;
-    private int videoTrackToRestore;
+    private Format        videoFormat;
+    private int           videoTrackToRestore;
 
     private BandwidthMeter bandwidthMeter;
-    private boolean backgrounded;
+    private boolean        backgrounded;
 
     private CaptionListener captionListener;
     private Id3MetadataListener id3MetadataListener;
@@ -276,10 +260,6 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
         }
     }
 
-    public void setVolume(float volume) {
-        player.sendMessage(audioRenderer, MediaCodecAudioTrackRenderer.MSG_SET_VOLUME, volume);
-    }
-
     public boolean getBackgrounded() {
         return backgrounded;
     }
@@ -314,8 +294,8 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
     /**
      * Invoked with the results from a {@link RendererBuilder}.
      *
-     * @param renderers      Renderers indexed by {@link DemoPlayer} TYPE_* constants. An individual
-     *                       element may be null if there do not exist tracks of the corresponding type.
+     * @param renderers Renderers indexed by {@link DemoPlayer} TYPE_* constants. An individual
+     *     element may be null if there do not exist tracks of the corresponding type.
      * @param bandwidthMeter Provides an estimate of the currently available bandwidth. May be null.
      */
   /* package */ void onRenderers(TrackRenderer[] renderers, BandwidthMeter bandwidthMeter) {
@@ -484,7 +464,7 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
     }
 
     @Override
-    public void onDecoderInitializationError(DecoderInitializationException e) {
+    public void onDecoderInitializationError(MediaCodecTrackRenderer.DecoderInitializationException e) {
         if (internalErrorListener != null) {
             internalErrorListener.onDecoderInitializationError(e);
         }
@@ -501,6 +481,13 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
     public void onAudioTrackWriteError(AudioTrack.WriteException e) {
         if (internalErrorListener != null) {
             internalErrorListener.onAudioTrackWriteError(e);
+        }
+    }
+
+    @Override
+    public void onAudioTrackUnderrun(int bufferSize, long bufferSizeMs, long elapsedSinceLastFeedMs) {
+        if (internalErrorListener != null) {
+            internalErrorListener.onAudioTrackUnderrun(bufferSize, bufferSizeMs, elapsedSinceLastFeedMs);
         }
     }
 
@@ -534,16 +521,16 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
     }
 
     @Override
-    public void onMetadata(Map<String, Object> metadata) {
+    public void onMetadata(List<Id3Frame> id3Frames) {
         if (id3MetadataListener != null && getSelectedTrack(TYPE_METADATA) != TRACK_DISABLED) {
-            id3MetadataListener.onId3Metadata(metadata);
+            id3MetadataListener.onId3Metadata(id3Frames);
         }
     }
 
     @Override
-    public void onAvailableRangeChanged(TimeRange availableRange) {
+    public void onAvailableRangeChanged(int sourceId, TimeRange availableRange) {
         if (infoListener != null) {
-            infoListener.onAvailableRangeChanged(availableRange);
+            infoListener.onAvailableRangeChanged(sourceId, availableRange);
         }
     }
 
@@ -583,6 +570,10 @@ public class DemoPlayer implements ExoPlayer.Listener, ChunkSampleSource.EventLi
     @Override
     public void onUpstreamDiscarded(int sourceId, long mediaStartTimeMs, long mediaEndTimeMs) {
         // Do nothing.
+    }
+
+    public void setVolume(float volume) {
+        player.sendMessage(audioRenderer, MediaCodecAudioTrackRenderer.MSG_SET_VOLUME, volume);
     }
 
     private void maybeReportPlayerState() {

@@ -6,6 +6,8 @@ import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.os.Build;
+import android.support.annotation.IdRes;
+import android.support.annotation.LayoutRes;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -18,9 +20,8 @@ import javax.microedition.khronos.egl.EGLContext;
 import javax.microedition.khronos.egl.EGLDisplay;
 import javax.microedition.khronos.egl.EGLSurface;
 
-import io.gresse.hugo.simpleexoplayer.view.AspectRatioTextureView;
 import io.gresse.hugo.simpleexoplayer.MediaFile;
-import io.gresse.hugo.simpleexoplayer.R;
+import io.gresse.hugo.simpleexoplayer.view.AspectRatioTextureView;
 
 /**
  * Extends ExoPlayer using a TextureView. The playing keep the same surface to draw onto during all
@@ -39,13 +40,29 @@ public class DynamicExoPlayer extends SimpleExoPlayer implements TextureView.Sur
     protected boolean mLastTextureDestroyed;
     protected boolean mAllowPlayInBackground = true;
 
-    public DynamicExoPlayer(Context context, MediaFile mediaFile, VideoPlayerListener nativeVideoPlayerListener) {
+    public DynamicExoPlayer(
+            Context context,
+            MediaFile mediaFile,
+            VideoPlayerListener nativeVideoPlayerListener) {
         super(context, mediaFile, nativeVideoPlayerListener);
     }
 
 
+    /**
+     * Called when surface has changed (entering a new activity with a new layout eg). This will
+     * attach the surface contained inside the viewGroup to the player. Also setting additional
+     * listener on the given view.
+     *
+     * @param context app context
+     * @param viewGroup the parent of the textureView
+     * @param textureViewId the textureView id
+     * @param textureViewLayoutId the layout to be inflated to create a new textureView
+     */
     @Override
-    public void attach(Context context, ViewGroup viewGroup) {
+    public void attach(Context context,
+                                ViewGroup viewGroup,
+                                @IdRes int textureViewId,
+                                @LayoutRes int textureViewLayoutId){
 
         if (mTextureView != null) {
             Log.d(LOG_TAG, "attach: removeTextureView");
@@ -58,20 +75,9 @@ public class DynamicExoPlayer extends SimpleExoPlayer implements TextureView.Sur
 
         mContext = context;
         mRootViewGroup = viewGroup;
-
-        if (mRootViewGroup == null) {
-            new NullPointerException("Trying to attach a null view, aborting now").printStackTrace();
-            return;
-        }
-
-        mVideoContainerView =
-                (ViewGroup) mRootViewGroup.findViewById(R.id.sep_VideoContainerFrameLayout);
         mRootViewGroup.setOnTouchListener(this);
 
-
-        // SurfaceView
-        AspectRatioTextureView textureView =
-                (AspectRatioTextureView) mRootViewGroup.findViewById(R.id.sep_VideoSurfaceLayout);
+        AspectRatioTextureView textureView = (AspectRatioTextureView) mRootViewGroup.findViewById(textureViewId);
 
         if (textureView == null) {
             if (mTextureView != null) {
@@ -84,7 +90,7 @@ public class DynamicExoPlayer extends SimpleExoPlayer implements TextureView.Sur
                 // layout (eg).
                 LayoutInflater layoutInflater = (LayoutInflater) context
                         .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                mTextureView = (AspectRatioTextureView) layoutInflater.inflate(R.layout.layout_textureview, mRootViewGroup, false);
+                mTextureView = (AspectRatioTextureView) layoutInflater.inflate(textureViewLayoutId, mRootViewGroup, false);
 
 
                 mVideoContainerView.addView(mTextureView);

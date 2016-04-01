@@ -3,6 +3,8 @@ package io.gresse.hugo.simpleexoplayer.player;
 import android.content.Context;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.support.annotation.IdRes;
+import android.support.annotation.LayoutRes;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,6 +33,7 @@ import io.gresse.hugo.simpleexoplayer.util.ViewUtils;
 public abstract class SimpleExoPlayer implements VideoPlayer, DemoPlayer.Listener, View.OnTouchListener {
 
     private static final String LOG_TAG = "SimpleExoPlayer";
+    private static boolean DEBUG = false;
 
     protected Context mContext;
 
@@ -99,12 +102,16 @@ public abstract class SimpleExoPlayer implements VideoPlayer, DemoPlayer.Listene
      * attach the surface contained inside the viewGroup to the player. Also setting additional
      * listener on the given view.
      *
-     * @param context   current app context
-     * @param viewGroup viewGroup containing the surface
+     * @param context app context
+     * @param viewGroup the parent of the textureView
+     * @param textureViewId the textureView id
+     * @param textureViewLayoutId the layout to be inflated to create a new textureView
      */
     @Override
-    public abstract void attach(Context context, ViewGroup viewGroup);
-
+    public abstract void attach(Context context,
+                ViewGroup viewGroup,
+                @IdRes int textureViewId,
+                @LayoutRes int textureViewLayoutId);
     /**
      * Update video width/height ratio
      */
@@ -483,12 +490,12 @@ public abstract class SimpleExoPlayer implements VideoPlayer, DemoPlayer.Listene
                 if (mIsNativeClick && !isReleased() && mNativeVideoPlayerListenerList != null) {
 
                     if (ViewUtils.isPointInsideView(event.getRawX(), event.getRawY(), mVideoContainerView)) {
-                        Log.d(LOG_TAG, "nativeVideoPlayerDidTouch");
+                        Log.d(LOG_TAG, "didTouch");
                         for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
                             listener.nativeVideoPlayerDidTouch(false);
                         }
                     } else {
-                        Log.d(LOG_TAG, "nativeVideoPlayerDidTouchBackground");
+                        Log.d(LOG_TAG, "didTouchBackground");
                         for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
                             listener.nativeVideoPlayerDidTouch(true);
                         }

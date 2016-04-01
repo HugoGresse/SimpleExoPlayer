@@ -1,6 +1,8 @@
 package io.gresse.hugo.simpleexoplayer.player;
 
 import android.content.Context;
+import android.support.annotation.IdRes;
+import android.support.annotation.LayoutRes;
 import android.view.ViewGroup;
 
 /**
@@ -22,10 +24,15 @@ public interface VideoPlayer {
      * attach the surface contained inside the viewGroup to the player. Also setting additional
      * listener on the given view.
      *
-     * @param context   current app context
-     * @param viewGroup viewGroup containing the surface
+     * @param context app context
+     * @param viewGroup the parent of the textureView
+     * @param textureViewId the textureView id
+     * @param textureViewLayoutId the layout to be inflated to create a new textureView
      */
-    void attach(Context context, ViewGroup viewGroup);
+    void attach(Context context,
+                ViewGroup viewGroup,
+                @IdRes int textureViewId,
+                @LayoutRes int textureViewLayoutId);
 
     /**
      * Update video width/height ratio
