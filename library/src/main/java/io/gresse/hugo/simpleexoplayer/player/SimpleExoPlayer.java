@@ -8,6 +8,7 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.support.annotation.IdRes;
 import android.support.annotation.LayoutRes;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -31,7 +32,7 @@ import io.gresse.hugo.simpleexoplayer.MediaFile;
 import io.gresse.hugo.simpleexoplayer.player.base.DemoPlayer;
 import io.gresse.hugo.simpleexoplayer.player.base.EventLogger;
 import io.gresse.hugo.simpleexoplayer.player.base.ExtractorRendererBuilder;
-import io.gresse.hugo.simpleexoplayer.util.ViewUtils;
+import io.gresse.hugo.simpleexoplayer.util.Utils;
 import io.gresse.hugo.simpleexoplayer.view.AspectRatioTextureView;
 
 /**
@@ -57,7 +58,8 @@ public class SimpleExoPlayer implements
     /**
      * Note that only the first listener will received publishProgress event
      */
-    protected CopyOnWriteArrayList<VideoPlayerListener> mNativeVideoPlayerListenerList;
+    @Nullable
+    protected CopyOnWriteArrayList<SimpleExoPlayerListener> mNativeSimpleExoPlayerListenerList;
 
     protected EventLogger mEventLogger;
     protected MediaFile   mMediaFile;
@@ -75,7 +77,7 @@ public class SimpleExoPlayer implements
     protected CountDownTimer mSoundtransitionTimer;
 
     protected ViewGroup mRootViewGroup;
-    protected ViewGroup mVideoContainerView;
+    // protected ViewGroup mVideoContainerView;
 
     protected boolean mAutoPlay               = false;
     protected boolean mIsReady                = false;
@@ -90,13 +92,17 @@ public class SimpleExoPlayer implements
     protected boolean mAllowPlayInBackground = true;
 
 
+    public SimpleExoPlayer(Context context, MediaFile mediaFile) {
+        this(context, mediaFile, null);
+    }
+
     public SimpleExoPlayer(Context context,
                            MediaFile mediaFile,
-                           VideoPlayerListener nativeVideoPlayerListener) {
+                           @Nullable SimpleExoPlayerListener nativeSimpleExoPlayerListener) {
         mContext = context;
         mMediaFile = mediaFile;
-        mNativeVideoPlayerListenerList = new CopyOnWriteArrayList<>();
-        mNativeVideoPlayerListenerList.add(nativeVideoPlayerListener);
+        mNativeSimpleExoPlayerListenerList = new CopyOnWriteArrayList<>();
+        mNativeSimpleExoPlayerListenerList.add(nativeSimpleExoPlayerListener);
     }
 
     /**
@@ -133,8 +139,8 @@ public class SimpleExoPlayer implements
     @Override
     public void attach(Context context,
                        ViewGroup viewGroup,
-                       @IdRes int textureViewId,
-                       @LayoutRes int textureViewLayoutId) {
+                       @LayoutRes int textureViewLayoutId,
+                       @IdRes int textureViewId) {
 
         if (mTextureView != null) {
             Log.d(LOG_TAG, "attach: removeTextureView");
@@ -154,8 +160,8 @@ public class SimpleExoPlayer implements
         if (textureView == null) {
             if (mTextureView != null) {
                 Log.d(LOG_TAG, "attach: Restoring last TextureView");
-                mVideoContainerView.addView(mTextureView);
-                mVideoContainerView.getLayoutParams().width = ViewGroup.LayoutParams.WRAP_CONTENT;
+                mRootViewGroup.addView(mTextureView);
+                mRootViewGroup.getLayoutParams().width = ViewGroup.LayoutParams.WRAP_CONTENT;
             } else {
                 Log.d(LOG_TAG, "attach: Creating a TextureView");
                 // When release after fullscreen finished/skip, the view is not added in normal
@@ -165,10 +171,10 @@ public class SimpleExoPlayer implements
                 mTextureView = (AspectRatioTextureView) layoutInflater.inflate(textureViewLayoutId, mRootViewGroup, false);
 
 
-                mVideoContainerView.addView(mTextureView);
+                mRootViewGroup.addView(mTextureView);
             }
 
-            mVideoContainerView.requestLayout();
+            mRootViewGroup.requestLayout();
         } else {
             Log.d(LOG_TAG, "attach: Retrieve TextureView from view");
             mTextureView = textureView;
@@ -335,7 +341,7 @@ public class SimpleExoPlayer implements
         mHasStartedOnce = false;
         if (mPlayer != null) {
             Log.v(LOG_TAG, "release");
-            mNativeVideoPlayerListenerList = null;
+            mNativeSimpleExoPlayerListenerList = null;
             if (mSoundtransitionTimer != null) {
                 mSoundtransitionTimer.cancel();
             }
@@ -416,26 +422,26 @@ public class SimpleExoPlayer implements
 
     /**
      * Register a new player listener to be notified by player event.
-     * See {@link VideoPlayerListener}
+     * See {@link SimpleExoPlayerListener}
      */
     @Override
-    public void addPlayerListener(VideoPlayerListener listener) {
-        if (mNativeVideoPlayerListenerList == null) {
-            mNativeVideoPlayerListenerList = new CopyOnWriteArrayList<>();
+    public void addPlayerListener(SimpleExoPlayerListener listener) {
+        if (mNativeSimpleExoPlayerListenerList == null) {
+            mNativeSimpleExoPlayerListenerList = new CopyOnWriteArrayList<>();
         }
 
-        mNativeVideoPlayerListenerList.add(listener);
+        mNativeSimpleExoPlayerListenerList.add(listener);
     }
 
     /**
      * Unregister athe given listener.
-     * See {@link #addPlayerListener(VideoPlayerListener)}
-     * See {@link VideoPlayerListener}
+     * See {@link #addPlayerListener(SimpleExoPlayerListener)}
+     * See {@link SimpleExoPlayerListener}
      */
     @Override
-    public void removePlayerListener(VideoPlayerListener listener) {
-        if (mNativeVideoPlayerListenerList != null) {
-            mNativeVideoPlayerListenerList.remove(listener);
+    public void removePlayerListener(SimpleExoPlayerListener listener) {
+        if (mNativeSimpleExoPlayerListenerList != null) {
+            mNativeSimpleExoPlayerListenerList.remove(listener);
         }
     }
 
@@ -476,8 +482,8 @@ public class SimpleExoPlayer implements
 
         if (!mHasStartedOnce) {
             mHasStartedOnce = true;
-            for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                listener.nativeVideoPlayerDidStartPlaying();
+            for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                listener.playerStartPlaying();
             }
         }
 
@@ -517,7 +523,7 @@ public class SimpleExoPlayer implements
 
 
     protected DemoPlayer.RendererBuilder getRendererBuilder() {
-        String userAgent = Util.getUserAgent(mContext, "ExoPlayerDemo");
+        String userAgent = Util.getUserAgent(mContext, "SimpleExoPlayer");
         switch (mMediaFile.type) {
             case "video/mp4":
                 return new ExtractorRendererBuilder(mContext, userAgent, mMediaFile.getMediaFileURI());
@@ -547,9 +553,9 @@ public class SimpleExoPlayer implements
 
                 mLastPosition = mPlayer.getCurrentPosition();
 
-                if (mNativeVideoPlayerListenerList != null
-                        && mNativeVideoPlayerListenerList.get(0) != null) {
-                    mNativeVideoPlayerListenerList.get(0).nativeVideoPlayerPublishProgress(mPlayer.getCurrentPosition());
+                if (mNativeSimpleExoPlayerListenerList != null
+                        && mNativeSimpleExoPlayerListenerList.get(0) != null) {
+                    mNativeSimpleExoPlayerListenerList.get(0).playerPublishProgress(mPlayer.getCurrentPosition());
                 }
 
                 // rerun handler if next time to sent event is not the end
@@ -569,16 +575,16 @@ public class SimpleExoPlayer implements
                 // prevent multiple isReady event sending by sending only the first one
                 if (!mIsReady) {
                     mIsReady = true;
-                    for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                        listener.nativeVideoPlayerIsLoaded();
+                    for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                        listener.playerIsLoaded();
                     }
                 }
                 break;
             case ExoPlayer.STATE_ENDED:
                 Log.d(LOG_TAG, "State Ended");
-                if (mNativeVideoPlayerListenerList != null) {
-                    for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                        listener.nativeVideoPlayerFinishPlaying();
+                if (mNativeSimpleExoPlayerListenerList != null) {
+                    for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                        listener.playerFinishPlaying();
                     }
                 }
                 // prevent Player for sending more than one finish playing event
@@ -591,9 +597,9 @@ public class SimpleExoPlayer implements
     @Override
     public void onError(Exception e) {
         Log.e(LOG_TAG, "Playback failed", e);
-        if (mNativeVideoPlayerListenerList != null) {
-            for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                listener.nativeVideoPlayerOnError(e);
+        if (mNativeSimpleExoPlayerListenerList != null) {
+            for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                listener.playerError(e);
             }
         }
         this.release();
@@ -610,9 +616,9 @@ public class SimpleExoPlayer implements
 
         mSavedSurfaceTexture = surfaceTexture;
 
-        if (mNativeVideoPlayerListenerList != null) {
-            for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                listener.nativeVideoPlayerViewAttached();
+        if (mNativeSimpleExoPlayerListenerList != null) {
+            for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                listener.playerViewAttached();
             }
         }
 
@@ -639,9 +645,9 @@ public class SimpleExoPlayer implements
         } else if (isPlaying()) {
             Log.d(LOG_TAG, "onSurfaceTextureDestroyed Pause player");
 
-            if (mNativeVideoPlayerListenerList != null && !isReleased()) {
-                for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                    listener.nativeVideoPlayerSurfaceDestroyedShouldPause();
+            if (mNativeSimpleExoPlayerListenerList != null && !isReleased()) {
+                for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                    listener.playerSurfaceDestroyedShouldPause();
                 }
             }
             pause();
@@ -680,17 +686,17 @@ public class SimpleExoPlayer implements
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                if (mIsNativeClick && !isReleased() && mNativeVideoPlayerListenerList != null) {
+                if (mIsNativeClick && !isReleased() && mNativeSimpleExoPlayerListenerList != null) {
 
-                    if (ViewUtils.isPointInsideView(event.getRawX(), event.getRawY(), mVideoContainerView)) {
+                    if (Utils.isPointInsideView(event.getRawX(), event.getRawY(), mRootViewGroup)) {
                         Log.d(LOG_TAG, "didTouch");
-                        for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                            listener.nativeVideoPlayerDidTouch(false);
+                        for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                            listener.playerTouch(false);
                         }
                     } else {
                         Log.d(LOG_TAG, "didTouchBackground");
-                        for (VideoPlayerListener listener : mNativeVideoPlayerListenerList) {
-                            listener.nativeVideoPlayerDidTouch(true);
+                        for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                            listener.playerTouch(true);
                         }
                     }
 

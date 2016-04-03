@@ -163,15 +163,15 @@ public interface VideoPlayer {
 
     /**
      * Register a new player listener to be notified by player event.
-     * See {@link VideoPlayerListener}
+     * See {@link SimpleExoPlayerListener}
      */
-    void addPlayerListener(VideoPlayerListener listener);
+    void addPlayerListener(SimpleExoPlayerListener listener);
 
     /**
      * Unregister athe given listener.
-     * See {@link #addPlayerListener(VideoPlayerListener)}
-     * See {@link VideoPlayerListener}
+     * See {@link #addPlayerListener(SimpleExoPlayerListener)}
+     * See {@link SimpleExoPlayerListener}
      */
-    void removePlayerListener(VideoPlayerListener listener);
+    void removePlayerListener(SimpleExoPlayerListener listener);
 
 }

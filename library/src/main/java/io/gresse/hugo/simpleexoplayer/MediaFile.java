@@ -4,21 +4,21 @@ import android.net.Uri;
 
 /**
  * A media File
- *
- * @hide
  */
 public class MediaFile {
 
     public String mediaFileURL;
     public String id;
-    public String delivery;
+
+    /**
+     * The mime type such as:
+     * - video/mp4
+     * - video/webm
+     */
     public String type;
-    public int bitrate;
     public int width;
     public int height;
-    public boolean scalable;
     public boolean maintainAspectRatio;
-    public String apiFramework;
 
 
     public MediaFile(String mediaFileURL) {

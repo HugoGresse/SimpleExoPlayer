@@ -1,15 +1,18 @@
 package io.gresse.hugo.simpleexoplayerdemo;
 
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
+
+    public static final String TAG = MainActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,14 +21,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        changeFragment(new ChooserFragment(), true);
     }
 
     @Override
@@ -49,4 +45,44 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+
+    /**
+     * Change tu current displayed fragment by a new one.
+     *
+     * @param frag            the new fragment to display
+     * @param saveInBackstack if we want the fragment to be in backstack
+     */
+    public void changeFragment(Fragment frag, boolean saveInBackstack) {
+        String backStateName = ((Object) frag).getClass().getName();
+
+        try {
+            FragmentManager manager = getSupportFragmentManager();
+            boolean fragmentPopped = manager.popBackStackImmediate(backStateName, 0);
+
+            if (!fragmentPopped && manager.findFragmentByTag(backStateName) == null) {
+                //fragment not in back stack, create it.
+                FragmentTransaction transaction = manager.beginTransaction();
+
+                transaction.replace(R.id.fragment_container, frag, backStateName);
+
+                if (saveInBackstack) {
+                    Log.d(TAG, "Change Fragment: addToBackTack " + backStateName);
+                    transaction.addToBackStack(backStateName);
+                } else {
+                    Log.d(TAG, "Change Fragment: NO addToBackTack " + backStateName);
+                }
+
+                transaction.commit();
+            } else if(!fragmentPopped && manager.findFragmentByTag(backStateName) != null) {
+                Log.d(TAG, "Fragment not popped but finded: " + backStateName);
+            } else {
+                Log.d(TAG, "Change Fragment: nothing to do : " + backStateName + " fragmentPopped: " + fragmentPopped);
+                // custom effect if fragment is already instanciated
+            }
+        } catch (IllegalStateException exception) {
+            Log.w(TAG, "Unable to commit fragment, could be activity as been killed in background. " + exception.toString());
+        }
+    }
+
 }

@@ -14,7 +14,7 @@ import io.gresse.hugo.simpleexoplayer.view.ExoplayerView;
  *
  * Created by Hugo Gresse on 01/04/16.
  */
-public class SimpleFragment extends Fragment {
+public class ExoPlayerViewFragment extends Fragment {
 
     ExoplayerView mExoplayerView;
 
@@ -22,7 +22,7 @@ public class SimpleFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_simple, container);
+        View view = inflater.inflate(R.layout.fragment_exoplayerview, container, false);
 
         return view;
     }
