@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="ExoplayerView">
+        <attr name="videoUrl" format="string"/>
+        <attr name="autoPlay" format="boolean"/>
+        <attr name="preload" format="boolean"/>
+        <attr name="playInBackground" format="boolean"/>
+    </declare-styleable>
+
+</resources>

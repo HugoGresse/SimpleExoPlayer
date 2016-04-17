@@ -1,10 +1,8 @@
 package io.gresse.hugo.simpleexoplayer.util;
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
+import android.support.annotation.Nullable;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 
 /**
  * General utilisaty related to image and views
@@ -38,4 +36,19 @@ public class Utils {
         return false;
     }
 
+    /**
+     * Get the mime type of the given file based on the extension
+     *
+     * @param url the url
+     * @return the mime type like "video/mp4"
+     */
+    @Nullable
+    public static String getMimeType(String url) {
+        String type = null;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+        if (extension != null) {
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+        return type;
+    }
 }

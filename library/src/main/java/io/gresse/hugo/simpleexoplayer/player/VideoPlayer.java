@@ -3,7 +3,7 @@ package io.gresse.hugo.simpleexoplayer.player;
 import android.content.Context;
 import android.support.annotation.IdRes;
 import android.support.annotation.LayoutRes;
-import android.view.ViewGroup;
+import android.view.View;
 
 /**
  * Generic interface for video player. Implement this to create your own player.
@@ -12,7 +12,7 @@ import android.view.ViewGroup;
  */
 public interface VideoPlayer {
 
-    int SOUND_FADE_PER_SECOND = 1000/30; // change value very 33ms to have a 30fps on sound
+    int SOUND_FADE_PER_SECOND = 1000 / 30; // change value very 33ms to have a 30fps on sound
 
     /**
      * Init player
@@ -24,13 +24,13 @@ public interface VideoPlayer {
      * attach the surface contained inside the viewGroup to the player. Also setting additional
      * listener on the given view.
      *
-     * @param context app context
-     * @param viewGroup the parent of the textureView
-     * @param textureViewId the textureView id
+     * @param context             app context
+     * @param view                the parent of the textureView
+     * @param textureViewId       the textureView id
      * @param textureViewLayoutId the layout to be inflated to create a new textureView
      */
     void attach(Context context,
-                ViewGroup viewGroup,
+                View view,
                 @IdRes int textureViewId,
                 @LayoutRes int textureViewLayoutId);
 
@@ -48,12 +48,12 @@ public interface VideoPlayer {
     /**
      * Internal called when video size changed
      *
-     * @param width video width
-     * @param height video height
+     * @param width                    video width
+     * @param height                   video height
      * @param unappliedRotationDegrees rotationDegrees
-     * @param pixelRatio (optional) pixel ratio
+     * @param pixelRatio               (optional) pixel ratio
      */
-    void onVideoSizeChanged(int width, int height,  int unappliedRotationDegrees, float pixelRatio);
+    void onVideoSizeChanged(int width, int height, int unappliedRotationDegrees, float pixelRatio);
 
     /**
      * Pre load the video to begin buffering while video is not started
@@ -94,8 +94,8 @@ public interface VideoPlayer {
 
     /**
      * Unmute ucrrent video
-     * @param transitionDuration the transition duration
      *
+     * @param transitionDuration the transition duration
      */
     void unMute(int transitionDuration);
 
@@ -125,6 +125,15 @@ public interface VideoPlayer {
      * @return true if released, false either
      */
     boolean isReleased();
+
+
+    /**
+     * By default, the player will pause the video when the surface is destroyed, because the fragment or activity is
+     * paused.
+     *
+     * @param playInBackground true if you want to keep the video playing when the surface is destroyed
+     */
+    void setAllowPlayInBackground(boolean playInBackground);
 
     /**
      * Check if player is playing a video

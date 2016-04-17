@@ -76,9 +76,6 @@ public class SimpleExoPlayer implements
     protected float          mSoundVolume;
     protected CountDownTimer mSoundtransitionTimer;
 
-    protected ViewGroup mRootViewGroup;
-    // protected ViewGroup mVideoContainerView;
-
     protected boolean mAutoPlay               = false;
     protected boolean mIsReady                = false;
     protected boolean mIsMute                 = false;
@@ -102,7 +99,10 @@ public class SimpleExoPlayer implements
         mContext = context;
         mMediaFile = mediaFile;
         mNativeSimpleExoPlayerListenerList = new CopyOnWriteArrayList<>();
-        mNativeSimpleExoPlayerListenerList.add(nativeSimpleExoPlayerListener);
+
+        if (nativeSimpleExoPlayerListener != null) {
+            mNativeSimpleExoPlayerListenerList.add(nativeSimpleExoPlayerListener);
+        }
     }
 
     /**
@@ -132,13 +132,13 @@ public class SimpleExoPlayer implements
      * listener on the given view.
      *
      * @param context             app context
-     * @param viewGroup           the parent of the textureView
+     * @param view                the parent of the textureView
      * @param textureViewId       the textureView id
      * @param textureViewLayoutId the layout to be inflated to create a new textureView
      */
     @Override
     public void attach(Context context,
-                       ViewGroup viewGroup,
+                       View view,
                        @LayoutRes int textureViewLayoutId,
                        @IdRes int textureViewId) {
 
@@ -152,34 +152,43 @@ public class SimpleExoPlayer implements
         }
 
         mContext = context;
-        mRootViewGroup = viewGroup;
-        mRootViewGroup.setOnTouchListener(this);
 
-        AspectRatioTextureView textureView = (AspectRatioTextureView) mRootViewGroup.findViewById(textureViewId);
+        ViewGroup parentViewGroup = null;
+        AspectRatioTextureView textureView;
+
+        if (view instanceof AspectRatioTextureView) {
+            textureView = (AspectRatioTextureView) view;
+        } else if (view instanceof ViewGroup) {
+            parentViewGroup = (ViewGroup) view;
+            textureView = (AspectRatioTextureView) parentViewGroup.findViewById(textureViewId);
+        } else {
+            throw new IllegalArgumentException("Given view is not compatible");
+        }
 
         if (textureView == null) {
             if (mTextureView != null) {
                 Log.d(LOG_TAG, "attach: Restoring last TextureView");
-                mRootViewGroup.addView(mTextureView);
-                mRootViewGroup.getLayoutParams().width = ViewGroup.LayoutParams.WRAP_CONTENT;
+                parentViewGroup.addView(mTextureView);
+                parentViewGroup.getLayoutParams().width = ViewGroup.LayoutParams.WRAP_CONTENT;
             } else {
                 Log.d(LOG_TAG, "attach: Creating a TextureView");
                 // When release after fullscreen finished/skip, the view is not added in normal
                 // layout (eg).
                 LayoutInflater layoutInflater = (LayoutInflater) context
                         .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                mTextureView = (AspectRatioTextureView) layoutInflater.inflate(textureViewLayoutId, mRootViewGroup, false);
+                mTextureView = (AspectRatioTextureView) layoutInflater.inflate(textureViewLayoutId, parentViewGroup, false);
 
 
-                mRootViewGroup.addView(mTextureView);
+                parentViewGroup.addView(mTextureView);
             }
 
-            mRootViewGroup.requestLayout();
+            parentViewGroup.requestLayout();
         } else {
             Log.d(LOG_TAG, "attach: Retrieve TextureView from view");
             mTextureView = textureView;
         }
 
+        mTextureView.setOnTouchListener(this);
         ((ViewGroup) mTextureView.getParent()).setBackgroundColor(Color.BLACK);
 
         mTextureView.setSurfaceTextureListener(this);
@@ -372,6 +381,16 @@ public class SimpleExoPlayer implements
     }
 
     /**
+     * By default, the player will pause the video when the surface is destroyed, because the fragment or activity is
+     * paused.
+     *
+     * @param playInBackground true if you want to keep the video playing when the surface is destroyed
+     */
+    public void setAllowPlayInBackground(boolean playInBackground) {
+        mAllowPlayInBackground = playInBackground;
+    }
+
+    /**
      * Check if player is playing a video
      *
      * @return true if is playing, false otherweise
@@ -553,8 +572,9 @@ public class SimpleExoPlayer implements
 
                 mLastPosition = mPlayer.getCurrentPosition();
 
-                if (mNativeSimpleExoPlayerListenerList != null
-                        && mNativeSimpleExoPlayerListenerList.get(0) != null) {
+                if (mNativeSimpleExoPlayerListenerList != null &&
+                        !mNativeSimpleExoPlayerListenerList.isEmpty() &&
+                        mNativeSimpleExoPlayerListenerList.get(0) != null) {
                     mNativeSimpleExoPlayerListenerList.get(0).playerPublishProgress(mPlayer.getCurrentPosition());
                 }
 
@@ -570,8 +590,10 @@ public class SimpleExoPlayer implements
 
     @Override
     public void onStateChanged(boolean playWhenReady, int playbackState) {
+        String stringState;
         switch (playbackState) {
             case ExoPlayer.STATE_READY:
+                stringState = "STATE_READY";
                 // prevent multiple isReady event sending by sending only the first one
                 if (!mIsReady) {
                     mIsReady = true;
@@ -581,6 +603,7 @@ public class SimpleExoPlayer implements
                 }
                 break;
             case ExoPlayer.STATE_ENDED:
+                stringState = "STATE_ENDED";
                 Log.d(LOG_TAG, "State Ended");
                 if (mNativeSimpleExoPlayerListenerList != null) {
                     for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
@@ -590,8 +613,21 @@ public class SimpleExoPlayer implements
                 // prevent Player for sending more than one finish playing event
 
                 break;
+
+            case ExoPlayer.STATE_IDLE:
+                stringState = "STATE_IDLE";
+                break;
+            case ExoPlayer.STATE_PREPARING:
+                stringState = "STATE_PREPARING";
+                break;
+            case ExoPlayer.STATE_BUFFERING:
+                stringState = "STATE_BUFFERING";
+                break;
+            default:
+                stringState = "Unknown state";
+                break;
         }
-        Log.d(LOG_TAG, "Player state change : " + playbackState);
+        Log.d(LOG_TAG, "Player state change: " + stringState);
     }
 
     @Override
@@ -616,7 +652,7 @@ public class SimpleExoPlayer implements
 
         mSavedSurfaceTexture = surfaceTexture;
 
-        if (mNativeSimpleExoPlayerListenerList != null) {
+        if (mNativeSimpleExoPlayerListenerList != null && !mNativeSimpleExoPlayerListenerList.isEmpty()) {
             for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
                 listener.playerViewAttached();
             }
@@ -651,6 +687,7 @@ public class SimpleExoPlayer implements
                 }
             }
             pause();
+            mAutoPlay = true;
         }
 
         return (mSavedSurfaceTexture == null);
@@ -688,7 +725,7 @@ public class SimpleExoPlayer implements
             case MotionEvent.ACTION_UP:
                 if (mIsNativeClick && !isReleased() && mNativeSimpleExoPlayerListenerList != null) {
 
-                    if (Utils.isPointInsideView(event.getRawX(), event.getRawY(), mRootViewGroup)) {
+                    if (Utils.isPointInsideView(event.getRawX(), event.getRawY(), mTextureView)) {
                         Log.d(LOG_TAG, "didTouch");
                         for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
                             listener.playerTouch(false);
