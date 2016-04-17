@@ -20,7 +20,7 @@ import io.gresse.hugo.simpleexoplayer.util.Utils;
 
 /**
  * A view that wrap inner Exoplayer to be very simple to use
- *
+ * <p/>
  * Created by Hugo Gresse on 01/04/16.
  */
 public class ExoplayerView extends AspectRatioTextureView {
@@ -67,12 +67,11 @@ public class ExoplayerView extends AspectRatioTextureView {
         String videoUrl = a.getString(R.styleable.ExoplayerView_videoUrl);
         a.recycle();
 
-        if(!TextUtils.isEmpty(videoUrl)){
+        if (!TextUtils.isEmpty(videoUrl)) {
             setVideoUrl(videoUrl);
         }
 
-        createPlayer();
-
+        maybeCreatePlayer();
     }
 
     @Override
@@ -81,14 +80,13 @@ public class ExoplayerView extends AspectRatioTextureView {
 
         Log.i(TAG, "onAttachedToWindow");
 
-        if(mSimpleExoPlayer == null){
-            createPlayer();
+        if (mSimpleExoPlayer == null && !maybeCreatePlayer()) {
+            return;
         }
-
 
         mSimpleExoPlayer.attach(getContext(), this, 0, getId());
 
-        if(mAutoPlay && !mSimpleExoPlayer.isAutoPlay()){
+        if (mAutoPlay && !mSimpleExoPlayer.isAutoPlay()) {
             mSimpleExoPlayer.start();
         }
 
@@ -113,11 +111,11 @@ public class ExoplayerView extends AspectRatioTextureView {
             Bundle bundle = (Bundle) state;
             boolean wasPlaying = bundle.getBoolean(BUNDLE_STATE_PLAYING);
 
-            if(mSimpleExoPlayer == null){
-                createPlayer();
+            if (mSimpleExoPlayer == null && !maybeCreatePlayer()) {
+                return;
             }
 
-            if(wasPlaying){
+            if (wasPlaying) {
                 mSimpleExoPlayer.start();
             }
 
@@ -132,10 +130,11 @@ public class ExoplayerView extends AspectRatioTextureView {
 
     /**
      * Get the current video url
+     *
      * @return the video url
      */
     @Nullable
-    public String getVideoUrl(){
+    public String getVideoUrl() {
         return mMediaFile.mediaFileURL;
     }
 
@@ -144,9 +143,29 @@ public class ExoplayerView extends AspectRatioTextureView {
      *
      * @param videoUrl the video url, local or remote
      */
-    public void setVideoUrl(@NonNull String videoUrl){
+    public void setVideoUrl(@NonNull String videoUrl) {
         mMediaFile = new MediaFile(videoUrl);
         mMediaFile.type = Utils.getMimeType(videoUrl);
+        if (mSimpleExoPlayer != null) {
+            mSimpleExoPlayer.release();
+        }
+        maybeCreatePlayer();
+        mSimpleExoPlayer.attach(getContext(), this, 0, getId());
+    }
+
+    /**
+     * Get the current player, if any
+     */
+    @Nullable
+    public SimpleExoPlayer getPlayer() {
+        return mSimpleExoPlayer;
+    }
+
+    /**
+     * Set the current view player
+     */
+    public void setPlayer(@Nullable SimpleExoPlayer simpleExoPlayer) {
+        mSimpleExoPlayer = simpleExoPlayer;
     }
 
     /***************************
@@ -155,21 +174,25 @@ public class ExoplayerView extends AspectRatioTextureView {
 
     /**
      * Create the player based on current class members
+     *
+     * @return true if player created, false either
      */
-    private void createPlayer(){
-        if(mMediaFile == null){
-            throw new NullPointerException("No video to play");
+    private boolean maybeCreatePlayer() {
+        if (mMediaFile == null) {
+            Log.d(TAG, "No video to play");
+            return false;
         }
 
         mSimpleExoPlayer = new SimpleExoPlayer(getContext(), mMediaFile, mSimpleExoPlayerListener);
         mSimpleExoPlayer.init();
 
-        if(mPreLoad){
+        if (mPreLoad) {
             mSimpleExoPlayer.preLoad();
         }
 
-        if(mPlayInBackground){
+        if (mPlayInBackground) {
             mSimpleExoPlayer.setAllowPlayInBackground(true);
         }
+        return true;
     }
 }

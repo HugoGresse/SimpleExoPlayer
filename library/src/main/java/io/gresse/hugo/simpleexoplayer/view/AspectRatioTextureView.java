@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.TextureView;
 
@@ -14,6 +15,11 @@ import android.view.TextureView;
  */
 @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
 public class AspectRatioTextureView extends TextureView implements TextureView.SurfaceTextureListener, VideoSurfaceInterface {
+
+    public static final int LASTSTATE_AVAILABLE = 0;
+    public static final int LASTSTATE_SIZECHANGED = 1;
+    public static final int LASTSTATE_DESTROYED = 2;
+    public static final int LASTSTATE_UPDATED = 3;
 
     /**
      * The {@link AspectRatioTextureView} will not resize itself if the fractional difference between its natural
@@ -31,8 +37,11 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
     /**
      * External listener to we can save is view has been created or not
      */
+    @Nullable
     private SurfaceTextureListener mExternalListener;
 
+    private int mLastState;
+    private SurfaceTexture mLastSurfaceTexture;
     public boolean mSurfaceAvailable;
 
     public AspectRatioTextureView(Context context) {
@@ -126,7 +135,27 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
      */
     @Override
     public void setSurfaceTextureListener(SurfaceTextureListener listener) {
+        if(mExternalListener == null){
+            // No listener set before, call last TextureView.SurfaceTextureListener callbacks directly on it
+
+            switch (mLastState){
+                case LASTSTATE_AVAILABLE:
+                    listener.onSurfaceTextureAvailable(mLastSurfaceTexture, 0, 0);
+                    break;
+                case LASTSTATE_SIZECHANGED:
+                    listener.onSurfaceTextureSizeChanged(mLastSurfaceTexture, 0, 0);
+                    break;
+                case LASTSTATE_DESTROYED:
+                    listener.onSurfaceTextureDestroyed(mLastSurfaceTexture);
+                    break;
+                case LASTSTATE_UPDATED:
+                    listener.onSurfaceTextureUpdated(mLastSurfaceTexture);
+                    break;
+            }
+        }
+
         mExternalListener = listener;
+
     }
 
 
@@ -136,23 +165,37 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
 
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        mLastState = LASTSTATE_AVAILABLE;
         mSurfaceAvailable = true;
-        mExternalListener.onSurfaceTextureAvailable(surface, width, height);
+        mLastSurfaceTexture = surface;
+        if (mExternalListener != null) {
+            mExternalListener.onSurfaceTextureAvailable(surface, width, height);
+        }
     }
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        mExternalListener.onSurfaceTextureSizeChanged(surface, width, height);
+        mLastState = LASTSTATE_SIZECHANGED;
+        if (mExternalListener != null) {
+            mExternalListener.onSurfaceTextureSizeChanged(surface, width, height);
+        }
     }
 
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        mLastState = LASTSTATE_DESTROYED;
         mSurfaceAvailable = false;
-        return mExternalListener.onSurfaceTextureDestroyed(surface);
+        if (mExternalListener != null) {
+            return mExternalListener.onSurfaceTextureDestroyed(surface);
+        }
+        return false;
     }
 
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        mExternalListener.onSurfaceTextureUpdated(surface);
+        mLastState = LASTSTATE_UPDATED;
+        if (mExternalListener != null) {
+            mExternalListener.onSurfaceTextureUpdated(surface);
+        }
     }
 }

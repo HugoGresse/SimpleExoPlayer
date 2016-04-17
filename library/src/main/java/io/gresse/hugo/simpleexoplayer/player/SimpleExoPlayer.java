@@ -36,11 +36,10 @@ import io.gresse.hugo.simpleexoplayer.util.Utils;
 import io.gresse.hugo.simpleexoplayer.view.AspectRatioTextureView;
 
 /**
- * Based on Exoplayer FullPlayerActivity
+ * Based on Exoplayer Demo
  * <p/>
  * When the surface is destroyed, for example when the user switch app, the video is paused by
  * blocking surface.
- * <p/>
  * <p/>
  * Created by Hugo Gresse on 17/11/2014.
  */
@@ -397,11 +396,7 @@ public class SimpleExoPlayer implements
      */
     @Override
     public boolean isPlaying() {
-        if (null != mPlayer) {
-            return mPlayer.getPlayWhenReady();
-        } else {
-            return false;
-        }
+        return null != mPlayer && mPlayer.getPlayWhenReady();
     }
 
     @Override
@@ -501,8 +496,10 @@ public class SimpleExoPlayer implements
 
         if (!mHasStartedOnce) {
             mHasStartedOnce = true;
-            for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
-                listener.playerStartPlaying();
+            if(mNativeSimpleExoPlayerListenerList != null){
+                for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                    listener.playerStartPlaying();
+                }
             }
         }
 
@@ -705,7 +702,7 @@ public class SimpleExoPlayer implements
     private boolean mIsNativeClick = false;
     private float mStartNativeX;
     private float mStartNativeY;
-    private final float SCROLL_THRESHOLD = 10;
+    private static final float SCROLL_THRESHOLD = 10;
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
