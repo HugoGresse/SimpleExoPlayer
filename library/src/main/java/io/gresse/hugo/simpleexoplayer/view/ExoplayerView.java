@@ -150,7 +150,7 @@ public class ExoplayerView extends AspectRatioTextureView {
             mSimpleExoPlayer.release();
         }
         maybeCreatePlayer();
-        mSimpleExoPlayer.attach(getContext(), this, 0, getId());
+        //mSimpleExoPlayer.attach(getContext(), this, 0, getId());
     }
 
     /**

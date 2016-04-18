@@ -1,7 +1,6 @@
 package io.gresse.hugo.simpleexoplayer.player;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.os.CountDownTimer;
@@ -188,7 +187,6 @@ public class SimpleExoPlayer implements
         }
 
         mTextureView.setOnTouchListener(this);
-        ((ViewGroup) mTextureView.getParent()).setBackgroundColor(Color.BLACK);
 
         mTextureView.setSurfaceTextureListener(this);
 

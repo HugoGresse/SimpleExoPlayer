@@ -135,7 +135,7 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
      */
     @Override
     public void setSurfaceTextureListener(SurfaceTextureListener listener) {
-        if(mExternalListener == null){
+        if(mExternalListener != null){
             // No listener set before, call last TextureView.SurfaceTextureListener callbacks directly on it
 
             switch (mLastState){
@@ -176,6 +176,7 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
         mLastState = LASTSTATE_SIZECHANGED;
+        mLastSurfaceTexture = surface;
         if (mExternalListener != null) {
             mExternalListener.onSurfaceTextureSizeChanged(surface, width, height);
         }
@@ -184,6 +185,7 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
     @Override
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         mLastState = LASTSTATE_DESTROYED;
+        mLastSurfaceTexture = surface;
         mSurfaceAvailable = false;
         if (mExternalListener != null) {
             return mExternalListener.onSurfaceTextureDestroyed(surface);
@@ -194,6 +196,7 @@ public class AspectRatioTextureView extends TextureView implements TextureView.S
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         mLastState = LASTSTATE_UPDATED;
+        mLastSurfaceTexture = surface;
         if (mExternalListener != null) {
             mExternalListener.onSurfaceTextureUpdated(surface);
         }
