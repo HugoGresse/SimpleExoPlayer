@@ -10,7 +10,6 @@ import android.support.annotation.LayoutRes;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -31,7 +30,6 @@ import io.gresse.hugo.simpleexoplayer.MediaFile;
 import io.gresse.hugo.simpleexoplayer.player.base.DemoPlayer;
 import io.gresse.hugo.simpleexoplayer.player.base.EventLogger;
 import io.gresse.hugo.simpleexoplayer.player.base.ExtractorRendererBuilder;
-import io.gresse.hugo.simpleexoplayer.util.Utils;
 import io.gresse.hugo.simpleexoplayer.view.AspectRatioTextureView;
 
 /**
@@ -45,8 +43,7 @@ import io.gresse.hugo.simpleexoplayer.view.AspectRatioTextureView;
 public class SimpleExoPlayer implements
         VideoPlayer,
         DemoPlayer.Listener,
-        TextureView.SurfaceTextureListener,
-        View.OnTouchListener {
+        TextureView.SurfaceTextureListener {
 
     private static final String  LOG_TAG = SimpleExoPlayer.class.getSimpleName();
     private static       boolean DEBUG   = false;
@@ -185,8 +182,6 @@ public class SimpleExoPlayer implements
             Log.d(LOG_TAG, "attach: Retrieve TextureView from view");
             mTextureView = textureView;
         }
-
-        mTextureView.setOnTouchListener(this);
 
         mTextureView.setSurfaceTextureListener(this);
 
@@ -592,8 +587,10 @@ public class SimpleExoPlayer implements
                 // prevent multiple isReady event sending by sending only the first one
                 if (!mIsReady) {
                     mIsReady = true;
-                    for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
-                        listener.playerIsLoaded();
+                    if(mNativeSimpleExoPlayerListenerList != null){
+                        for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                            listener.playerIsLoaded();
+                        }
                     }
                 }
                 break;
@@ -691,52 +688,6 @@ public class SimpleExoPlayer implements
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
-    }
-
-    /*----------------------------------------
-    * Touch event
-    */
-
-    private boolean mIsNativeClick = false;
-    private float mStartNativeX;
-    private float mStartNativeY;
-    private static final float SCROLL_THRESHOLD = 10;
-
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-
-        switch (event.getAction() & MotionEvent.ACTION_MASK) {
-            case MotionEvent.ACTION_DOWN:
-                mStartNativeX = event.getX();
-                mStartNativeY = event.getY();
-                mIsNativeClick = true;
-                return true;
-            case MotionEvent.ACTION_MOVE:
-                if (mIsNativeClick && (Math.abs(mStartNativeX - event.getX()) > SCROLL_THRESHOLD
-                        || Math.abs(mStartNativeY - event.getY()) > SCROLL_THRESHOLD)) {
-                    mIsNativeClick = false;
-                }
-                break;
-            case MotionEvent.ACTION_UP:
-                if (mIsNativeClick && !isReleased() && mNativeSimpleExoPlayerListenerList != null) {
-
-                    if (Utils.isPointInsideView(event.getRawX(), event.getRawY(), mTextureView)) {
-                        Log.d(LOG_TAG, "didTouch");
-                        for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
-                            listener.playerTouch(false);
-                        }
-                    } else {
-                        Log.d(LOG_TAG, "didTouchBackground");
-                        for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
-                            listener.playerTouch(true);
-                        }
-                    }
-
-                    return true;
-                }
-        }
-
-        return false;
     }
 
     /**

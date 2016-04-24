@@ -18,8 +18,6 @@ public interface SimpleExoPlayerListener {
     void playerWillStartPlaying();
     void playerStartPlaying();
 
-    void playerTouch(boolean isBackground);
-
     void playerSurfaceDestroyedShouldPause();
     void playerFinishPlaying();
 

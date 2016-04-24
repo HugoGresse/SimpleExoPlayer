@@ -102,12 +102,6 @@ public class BasicFragment extends Fragment implements SimpleExoPlayerListener {
     }
 
     @Override
-    public void playerTouch(boolean isBackground) {
-        Log.d(TAG, "playerTouch: " + isBackground);
-
-    }
-
-    @Override
     public void playerSurfaceDestroyedShouldPause() {
         Log.d(TAG, "playerplayerSurfaceDestroyedShouldPauseIsLoaded");
 
