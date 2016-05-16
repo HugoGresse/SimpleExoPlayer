@@ -521,7 +521,7 @@ public class SimpleExoPlayer implements
     protected void attachSurfaceAndInit(SurfaceTexture surfaceTexture) {
         Log.d(LOG_TAG, "attachSurfaceAndInit willAutoPlay ? " + mAutoPlay);
 
-        if (mPlayer != null) {
+        if (mPlayer != null && surfaceTexture != null) {
             mRequestNewAttach = false;
             mPlayer.setSurface(new Surface(surfaceTexture));
             if (mAutoPlay) {
