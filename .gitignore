@@ -3,6 +3,16 @@
 /local.properties
 /.idea/workspace.xml
 /.idea/libraries
+captures/*.alloc
+.idea/modules.xml
+*.iml
+.idea/codeStyleSettings.xml
+.idea/misc.xml
+.idea/compiler.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+
 .DS_Store
 /build
 /captures
