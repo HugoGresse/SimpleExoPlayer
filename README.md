@@ -22,7 +22,7 @@ compile ('io.gresse.hugo.simpleexoplayer:library:0.1.2@aar') {
 
 Contribution
 ------
-Fill free to contribute to this library (fork and make a pull-request). Also, tell me if you're using this library so I can add you to the README. 
+Feell free to contribute to this library (fork and make a pull-request). Also, tell me if you're using this library so I can add you to the README. 
 
 Author
 ------
