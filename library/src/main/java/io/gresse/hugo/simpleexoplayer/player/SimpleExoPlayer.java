@@ -56,6 +56,7 @@ public class SimpleExoPlayer implements
     @Nullable
     protected CopyOnWriteArrayList<SimpleExoPlayerListener> mNativeSimpleExoPlayerListenerList;
 
+    @Nullable
     protected EventLogger mEventLogger;
     protected MediaFile   mMediaFile;
 
@@ -101,23 +102,42 @@ public class SimpleExoPlayer implements
     }
 
     /**
+     * Set debug state
+     * @param debug default false
+     */
+    public void setDebug(boolean debug){
+        DEBUG = debug;
+    }
+
+    /**
      * Init player
      */
     @Override
     public void init() {
         if (mPlayer == null) {
-            mPlayer = new DemoPlayer(getRendererBuilder());
+            try {
+                mPlayer = new DemoPlayer(getRendererBuilder());
+            } catch (IllegalStateException e) {
+                if (mNativeSimpleExoPlayerListenerList != null) {
+                    for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
+                        listener.playerError(e);
+                    }
+                }
+                return;
+            }
             mPlayer.addListener(this);
             mPlayer.seekTo(mPlayerPosition);
-            try {
-                mEventLogger = new EventLogger();
-                mEventLogger.startSession();
-            } catch (Exception e) {
-                e.printStackTrace();
+            if(DEBUG){
+                try {
+                    mEventLogger = new EventLogger();
+                    mEventLogger.startSession();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                mPlayer.addListener(mEventLogger);
+                mPlayer.setInfoListener(mEventLogger);
+                mPlayer.setInternalErrorListener(mEventLogger);
             }
-            mPlayer.addListener(mEventLogger);
-            mPlayer.setInfoListener(mEventLogger);
-            mPlayer.setInternalErrorListener(mEventLogger);
         }
     }
 
@@ -350,9 +370,10 @@ public class SimpleExoPlayer implements
             mPlayer.removeListener(this);
             mPlayer.release();
             mPlayer = null;
-            mEventLogger.endSession();
-            mEventLogger = null;
-
+            if(mEventLogger != null){
+                mEventLogger.endSession();
+                mEventLogger = null;
+            }
         }
 
         if (mTextureView != null && mTextureView.getSurfaceTexture() != null) {
@@ -489,7 +510,7 @@ public class SimpleExoPlayer implements
 
         if (!mHasStartedOnce) {
             mHasStartedOnce = true;
-            if(mNativeSimpleExoPlayerListenerList != null){
+            if (mNativeSimpleExoPlayerListenerList != null) {
                 for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
                     listener.playerStartPlaying();
                 }
@@ -531,12 +552,12 @@ public class SimpleExoPlayer implements
     }
 
 
-    protected DemoPlayer.RendererBuilder getRendererBuilder() {
+    protected DemoPlayer.RendererBuilder getRendererBuilder() throws IllegalStateException {
         String userAgent = Util.getUserAgent(mContext, "SimpleExoPlayer");
         switch (mMediaFile.type) {
             case "video/mp4":
-                return new ExtractorRendererBuilder(mContext, userAgent, mMediaFile.getMediaFileURI());
             case "video/webm":
+            case "video/ext-mp4":
                 return new ExtractorRendererBuilder(mContext, userAgent, mMediaFile.getMediaFileURI());
             default:
                 throw new IllegalStateException("Unsupported type: " + mMediaFile.type);
@@ -587,7 +608,7 @@ public class SimpleExoPlayer implements
                 // prevent multiple isReady event sending by sending only the first one
                 if (!mIsReady) {
                     mIsReady = true;
-                    if(mNativeSimpleExoPlayerListenerList != null){
+                    if (mNativeSimpleExoPlayerListenerList != null) {
                         for (SimpleExoPlayerListener listener : mNativeSimpleExoPlayerListenerList) {
                             listener.playerIsLoaded();
                         }
