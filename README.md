@@ -1,3 +1,5 @@
+### ⚠️ Deprecated, no longer supported as of Feb 2025 ⚠️
+
 # SimpleExoPlayer
 A simple ExoPlayer implementation for easy use [WIP]
 
